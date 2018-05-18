@@ -37,11 +37,18 @@ def get_goalie_stats(season):
     leaders = json.loads(resp_json)['data']
 
     goalies = pd.DataFrame(data=leaders)
+    goalies['points'] = goalies['saves'] / 9.0 - goalies['goalsAgainst']
+    goalies['points'] = goalies['points'].round()
+    maskNegatives = goalies['points'] < 0
+    goalies.loc[maskNegatives, 'points'] = 0
+    goalies['points'] += goalies['goals'] + goalies['assists'] + goalies['shutouts']
+    goalies['points'] = goalies['points'].astype(int)
 
+    goalies = goalies[['playerId', 'playerPositionCode', 'playerName', 'points']]
+    return goalies
 
+skaters = get_skater_stats(2018)
+goalies = get_goalie_stats(2018)
 
-
-
-print(get_skater_stats(2018))
-
-
+all_stats = pd.concat([skaters,goalies], axis=0)
+print(all_stats.sort_values('playerName'))
