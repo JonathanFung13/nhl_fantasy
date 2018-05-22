@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     # Call the Sheets API
     #SPREADSHEET_ID = '1CEz-fbuBqrCl2EzEQlUBtsfRSMGDgxKikKB1cNqubPQ' # ULLHP page
-    SPREADSHEET_ID = '1UOM45jvuMb3lo_LpGU-b8Afr0MEf-K8aNNyQrOEFdQU' #test page
+    SPREADSHEET_ID = '1UOM45jvuMb3lo_LpGU-b8Afr0MEf-K8aNNyQrOEFdQU' #test page for summer
 
     # How the input data should be interpreted.
     value_input_option = 'USER_ENTERED'  # TODO: Update placeholder value.
