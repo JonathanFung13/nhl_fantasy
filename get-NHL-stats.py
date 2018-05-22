@@ -20,38 +20,40 @@ def request_json(url):
     resp_json = requests.get(url).text
     return json.loads(resp_json)['data']
 
-def get_skater_stats(season):
-    req = 'http://www.nhl.com/stats/rest/skaters?isAggregate=false&reportType=basic&isGame=false' + \
-            '&reportName=skatersummary&sort=[{"property":"points","direction":"DESC"}]&cayenneExp=gameTypeId=2' + \
-            'and seasonId%3E=' + season + 'and seasonId%3C=' + season
+def get_skater_stats(start,end,type=2):
+    req = 'http://www.nhl.com/stats/rest/skaters?isAggregate=true&reportType=basic&isGame=false' + \
+            '&reportName=skatersummary&sort=[{"property":"points","direction":"DESC"}]&cayenneExp=gameTypeId=' + \
+            str(type) + 'and seasonId%3E=' + start + 'and seasonId%3C=' + end
     skaters = pd.DataFrame(data=request_json(req))
 
-    skaters = skaters[['playerId', 'playerPositionCode', 'playerName', 'points']]
+    skaters = skaters[['playerId', 'playerName', 'playerPositionCode', 'points']]
     maskForwards = skaters['playerPositionCode'] != 'D'
     skaters.loc[maskForwards, 'playerPositionCode'] = 'F'
 
     return skaters
 
-def get_goalie_stats(season):
-    req = 'http://www.nhl.com/stats/rest/goalies?isAggregate=false&reportType=goalie_basic&isGame=false' +\
-          '&reportName=goaliesummary&sort=[{"property":"saves","direction":"DESC"}]&cayenneExp=gameTypeId=2' +\
-          ' and seasonId%3E=' + season + 'and seasonId%3C=' + season
+def get_goalie_stats(start,end,type=2):
+    req = 'http://www.nhl.com/stats/rest/goalies?isAggregate=true&reportType=goalie_basic&isGame=false' +\
+          '&reportName=goaliesummary&sort=[{"property":"saves","direction":"DESC"}]&cayenneExp=gameTypeId=' + \
+            str(type) + 'and seasonId%3E=' + start + 'and seasonId%3C=' + end
     goalies = pd.DataFrame(data=request_json(req))
 
     goalies['points'] = goalies['saves'] / 9.0 - goalies['goalsAgainst']
-    goalies['points'] = goalies['points'].round()
+    goalies['points'] = goalies['points'].round(2)
     maskNegatives = goalies['points'] < 0
     goalies.loc[maskNegatives, 'points'] = 0
     goalies['points'] += goalies['goals'] + goalies['assists'] + goalies['shutouts']
-    goalies['points'] = goalies['points'].astype(int)
+    goalies['points'] = goalies['points'] #.astype(int)
 
-    goalies = goalies[['playerId', 'playerPositionCode', 'playerName', 'points']]
+    goalies = goalies[['playerId', 'playerName', 'playerPositionCode', 'points']]
     return goalies
 
 if __name__ == '__main__':
-    stringSeason = get_string_season(2018)
-    skaters = get_skater_stats(stringSeason)
-    goalies = get_goalie_stats(stringSeason)
+    startSeason = get_string_season(2018)
+    endSeason = get_string_season(2018)
+    gametype = 2 # playoffs = 3
+    skaters = get_skater_stats(startSeason, endSeason, gametype)
+    goalies = get_goalie_stats(startSeason, endSeason, gametype)
 
     all_stats = pd.concat([skaters, goalies], axis=0)
     all_stats = all_stats.sort_values('playerName')
@@ -66,23 +68,26 @@ if __name__ == '__main__':
     service = build('sheets', 'v4', http=creds.authorize(Http()))
 
     # Call the Sheets API
-    SPREADSHEET_ID = '1l6_ivIATcLNeZyPn0297MVr2ZiJlqIW2P8NXSAWF_nc'
-    RANGE_NAME = 'nhl_leaders!A1'
-    #result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_ID,
-    #                                             range=RANGE_NAME).execute()
+    #SPREADSHEET_ID = '1CEz-fbuBqrCl2EzEQlUBtsfRSMGDgxKikKB1cNqubPQ' # ULLHP page
+    SPREADSHEET_ID = '1UOM45jvuMb3lo_LpGU-b8Afr0MEf-K8aNNyQrOEFdQU' #test page
+
     # How the input data should be interpreted.
     value_input_option = 'USER_ENTERED'  # TODO: Update placeholder value.
 
-    for i, j in enumerate(all_stats):
-        print(i, j)
+    # Prepare the sheet for stats to be updated by clearing it and adding new header row
+    clear = service.spreadsheets().values().clear(spreadsheetId=SPREADSHEET_ID, range='nhl_leaders!A2:D',
+                                                    body={})
+    response = clear.execute()
+    pprint(response)
 
+    # Now update the stats
+    RANGE_NAME = 'nhl_leaders!A2'
 
     value_range_body = {
         # TODO: Add desired entries to the request body. All existing entries
         # will be replaced.
-        'values': [[row for row in all_stats.itertuples()]]
+        'values': all_stats.as_matrix().tolist()
     }
-    print(value_range_body)
 
     request = service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME,
                                                      valueInputOption=value_input_option,
