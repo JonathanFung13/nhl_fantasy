@@ -12,6 +12,7 @@ from pprint import pprint
 import json
 #import csv
 import pandas as pd
+import datetime as dt
 
 def get_string_season(season):
     return str(season - 1) + str(season)
@@ -26,7 +27,7 @@ def get_skater_stats(start,end,type=2):
             str(type) + 'and seasonId%3E=' + start + 'and seasonId%3C=' + end
     skaters = pd.DataFrame(data=request_json(req))
 
-    skaters = skaters[['playerId', 'playerName', 'playerPositionCode', 'points']]
+    skaters = skaters[['playerId', 'playerName', 'playerPositionCode', 'points', 'gamesPlayed']]
     maskForwards = skaters['playerPositionCode'] != 'D'
     skaters.loc[maskForwards, 'playerPositionCode'] = 'F'
 
@@ -45,13 +46,13 @@ def get_goalie_stats(start,end,type=2):
     goalies['points'] += goalies['goals'] + goalies['assists'] + goalies['shutouts']
     goalies['points'] = goalies['points'] #.astype(int)
 
-    goalies = goalies[['playerId', 'playerName', 'playerPositionCode', 'points']]
+    goalies = goalies[['playerId', 'playerName', 'playerPositionCode', 'points', 'gamesPlayed']]
     return goalies
 
 if __name__ == '__main__':
     startSeason = get_string_season(2018)
     endSeason = get_string_season(2018)
-    gametype = 2 # playoffs = 3
+    gametype = 3 # regular season =2, playoffs = 3
     skaters = get_skater_stats(startSeason, endSeason, gametype)
     goalies = get_goalie_stats(startSeason, endSeason, gametype)
 
@@ -75,7 +76,7 @@ if __name__ == '__main__':
     value_input_option = 'USER_ENTERED'  # TODO: Update placeholder value.
 
     # Prepare the sheet for stats to be updated by clearing it and adding new header row
-    clear = service.spreadsheets().values().clear(spreadsheetId=SPREADSHEET_ID, range='nhl_leaders!A2:D',
+    clear = service.spreadsheets().values().clear(spreadsheetId=SPREADSHEET_ID, range='nhl_leaders!A2:E',
                                                     body={})
     response = clear.execute()
     pprint(response)
@@ -96,3 +97,10 @@ if __name__ == '__main__':
 
     # TODO: Change code below to process the `response` dict:
     pprint(response)
+
+    # Put update timestamp in sheet
+    updateTimestamp = service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_ID,
+                                                             range='nhl_leaders!F1',
+                                                             valueInputOption=value_input_option,
+                                                             body={'values': [[str(dt.datetime.now())]]})
+    responseTime = updateTimestamp.execute()
