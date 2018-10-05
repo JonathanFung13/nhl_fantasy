@@ -49,16 +49,7 @@ def get_goalie_stats(start,end,type=2):
     goalies = goalies[['playerId', 'playerName', 'playerPositionCode', 'points', 'gamesPlayed']]
     return goalies
 
-if __name__ == '__main__':
-    startSeason = get_string_season(2018)
-    endSeason = get_string_season(2018)
-    gametype = 3 # regular season =2, playoffs = 3
-    skaters = get_skater_stats(startSeason, endSeason, gametype)
-    goalies = get_goalie_stats(startSeason, endSeason, gametype)
-
-    all_stats = pd.concat([skaters, goalies], axis=0)
-    all_stats = all_stats.sort_values('playerName')
-
+def pushUpdatetoSheet(stats, SPREADSHEET_ID):
     # Setup the Sheets API
     SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
     store = file.Storage('credentials.json')
@@ -69,8 +60,6 @@ if __name__ == '__main__':
     service = build('sheets', 'v4', http=creds.authorize(Http()))
 
     # Call the Sheets API
-    #SPREADSHEET_ID = '1CEz-fbuBqrCl2EzEQlUBtsfRSMGDgxKikKB1cNqubPQ' # ULLHP page
-    SPREADSHEET_ID = '1UOM45jvuMb3lo_LpGU-b8Afr0MEf-K8aNNyQrOEFdQU' #test page for summer
 
     # How the input data should be interpreted.
     value_input_option = 'USER_ENTERED'  # TODO: Update placeholder value.
@@ -87,7 +76,7 @@ if __name__ == '__main__':
     value_range_body = {
         # TODO: Add desired entries to the request body. All existing entries
         # will be replaced.
-        'values': all_stats.as_matrix().tolist()
+        'values': stats.as_matrix().tolist()
     }
 
     request = service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME,
@@ -104,3 +93,30 @@ if __name__ == '__main__':
                                                              valueInputOption=value_input_option,
                                                              body={'values': [[str(dt.datetime.now())]]})
     responseTime = updateTimestamp.execute()
+
+    return
+
+def main(endYearOfSeason, regularSeason, SPREADSHEET_ID):
+
+    # Get skater and goalie stats, combine them in a dataframe.
+    startSeason = get_string_season(endYearOfSeason)
+    endSeason = get_string_season(endYearOfSeason)
+    if regularSeason: # regular season =2, playoffs = 3
+        gametype = 2
+    else:
+        gametype = 3
+    skaters = get_skater_stats(startSeason, endSeason, gametype)
+    goalies = get_goalie_stats(startSeason, endSeason, gametype)
+    all_stats = pd.concat([skaters, goalies], axis=0)
+    all_stats = all_stats.sort_values('playerName')
+
+    pushUpdatetoSheet(all_stats, SPREADSHEET_ID)
+
+
+
+if __name__ == "__main__":
+
+    endYearOfSeason = 2019
+    regularSeason = True
+    googleSheetID = '1CEz-fbuBqrCl2EzEQlUBtsfRSMGDgxKikKB1cNqubPQ'
+    main(endYearOfSeason, regularSeason, googleSheetID)
