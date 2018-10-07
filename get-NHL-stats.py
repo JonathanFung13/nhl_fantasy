@@ -19,13 +19,13 @@ def get_string_season(season):
 
 def request_json(url):
     resp_json = requests.get(url).text
-    return json.loads(resp_json)['data']
+    return json.loads(resp_json)
 
 def get_skater_stats(start,end,type=2):
     req = 'http://www.nhl.com/stats/rest/skaters?isAggregate=true&reportType=basic&isGame=false' + \
             '&reportName=skatersummary&sort=[{"property":"points","direction":"DESC"}]&cayenneExp=gameTypeId=' + \
             str(type) + 'and seasonId%3E=' + start + 'and seasonId%3C=' + end
-    skaters = pd.DataFrame(data=request_json(req))
+    skaters = pd.DataFrame(data=request_json(req)['data'])
 
     skaters = skaters[['playerId', 'playerName', 'playerPositionCode', 'points', 'gamesPlayed']]
     maskForwards = skaters['playerPositionCode'] != 'D'
@@ -37,7 +37,7 @@ def get_goalie_stats(start,end,type=2):
     req = 'http://www.nhl.com/stats/rest/goalies?isAggregate=true&reportType=goalie_basic&isGame=false' +\
           '&reportName=goaliesummary&sort=[{"property":"saves","direction":"DESC"}]&cayenneExp=gameTypeId=' + \
             str(type) + 'and seasonId%3E=' + start + 'and seasonId%3C=' + end
-    goalies = pd.DataFrame(data=request_json(req))
+    goalies = pd.DataFrame(data=request_json(req)['data'])
 
     goalies['points'] = goalies['saves'] / 9.0 - goalies['goalsAgainst']
     goalies['points'] = goalies['points'].round(2)
@@ -49,7 +49,27 @@ def get_goalie_stats(start,end,type=2):
     goalies = goalies[['playerId', 'playerName', 'playerPositionCode', 'points', 'gamesPlayed']]
     return goalies
 
-def pushUpdatetoSheet(stats, SPREADSHEET_ID):
+def update_rosters(googleSheetID):
+    req = 'https://statsapi.web.nhl.com/api/v1/teams?expand=team.roster'
+    team = []
+    position = []
+    player = []
+
+    roster_bundle = request_json(req)['teams']
+    for teams in roster_bundle:
+        for players in teams['roster']['roster']:
+            team.append(teams['abbreviation'])
+            position.append(players['position']['abbreviation'])
+            player.append(players['person']['fullName'])
+    rosters = pd.DataFrame(data={'Player': player,
+                                 'Position': position,
+                                 'Team': team})
+    rosters = rosters.sort_values('Player')
+    pushUpdatetoSheet(rosters, googleSheetID, 'nhl_rosters')
+
+    return
+
+def pushUpdatetoSheet(stats, SPREADSHEET_ID, sheetName):
     # Setup the Sheets API
     SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
     store = file.Storage('credentials.json')
@@ -65,13 +85,13 @@ def pushUpdatetoSheet(stats, SPREADSHEET_ID):
     value_input_option = 'USER_ENTERED'  # TODO: Update placeholder value.
 
     # Prepare the sheet for stats to be updated by clearing it and adding new header row
-    clear = service.spreadsheets().values().clear(spreadsheetId=SPREADSHEET_ID, range='nhl_leaders!A2:E',
+    clear = service.spreadsheets().values().clear(spreadsheetId=SPREADSHEET_ID, range=sheetName + '!A2:E',
                                                     body={})
     response = clear.execute()
     pprint(response)
 
     # Now update the stats
-    RANGE_NAME = 'nhl_leaders!A2'
+    RANGE_NAME = sheetName + '!A2'
 
     value_range_body = {
         # TODO: Add desired entries to the request body. All existing entries
@@ -89,14 +109,14 @@ def pushUpdatetoSheet(stats, SPREADSHEET_ID):
 
     # Put update timestamp in sheet
     updateTimestamp = service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_ID,
-                                                             range='nhl_leaders!F1',
+                                                             range=sheetName + '!F1',
                                                              valueInputOption=value_input_option,
                                                              body={'values': [[str(dt.datetime.now())]]})
     responseTime = updateTimestamp.execute()
 
     return
 
-def main(endYearOfSeason, regularSeason, SPREADSHEET_ID):
+def update_stats(endYearOfSeason, regularSeason, SPREADSHEET_ID):
 
     # Get skater and goalie stats, combine them in a dataframe.
     startSeason = get_string_season(endYearOfSeason)
@@ -110,13 +130,14 @@ def main(endYearOfSeason, regularSeason, SPREADSHEET_ID):
     all_stats = pd.concat([skaters, goalies], axis=0)
     all_stats = all_stats.sort_values('playerName')
 
-    pushUpdatetoSheet(all_stats, SPREADSHEET_ID)
-
-
+    pushUpdatetoSheet(all_stats, SPREADSHEET_ID, 'nhl_leaders')
 
 if __name__ == "__main__":
 
     endYearOfSeason = 2019
     regularSeason = True
     googleSheetID = '1CEz-fbuBqrCl2EzEQlUBtsfRSMGDgxKikKB1cNqubPQ'
-    main(endYearOfSeason, regularSeason, googleSheetID)
+    sheetName = 'nhl_leaders'
+
+    update_rosters(googleSheetID)
+    update_stats(endYearOfSeason, regularSeason, googleSheetID)
