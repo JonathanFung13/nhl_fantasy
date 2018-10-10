@@ -40,7 +40,7 @@ def get_goalie_stats(start,end,type=2):
     goalies = pd.DataFrame(data=request_json(req)['data'])
 
     goalies['points'] = goalies['saves'] / 9.0 - goalies['goalsAgainst']
-    goalies['points'] = goalies['points'].round(2)
+    goalies['points'] = goalies['points'].round(0)
     maskNegatives = goalies['points'] < 0
     goalies.loc[maskNegatives, 'points'] = 0
     goalies['points'] += goalies['goals'] + goalies['assists'] + goalies['shutouts']
