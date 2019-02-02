@@ -89,7 +89,7 @@ def pushUpdatetoSheet(stats, SPREADSHEET_ID, sheetName):
     clear = service.spreadsheets().values().clear(spreadsheetId=SPREADSHEET_ID, range=sheetName + '!A2:I',
                                                     body={})
     response = clear.execute()
-    pprint(response)
+    #pprint(response)
 
     # Now update the stats
     RANGE_NAME = sheetName + '!A2'
@@ -106,7 +106,7 @@ def pushUpdatetoSheet(stats, SPREADSHEET_ID, sheetName):
     response = request.execute()
 
     # TODO: Change code below to process the `response` dict:
-    pprint(response)
+    # pprint(response)
 
     # Put update timestamp in sheet
     updateTimestamp = service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_ID,
