@@ -97,7 +97,7 @@ def pushUpdatetoSheet(stats, SPREADSHEET_ID, sheetName):
     value_range_body = {
         # TODO: Add desired entries to the request body. All existing entries
         # will be replaced.
-        'values': stats.as_matrix().tolist()
+        'values': stats.values.tolist()
     }
 
     request = service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME,
