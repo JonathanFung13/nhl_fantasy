@@ -25,14 +25,18 @@ def get_skater_stats(start,end,type=2):
     req = 'http://www.nhl.com/stats/rest/skaters?isAggregate=false&reportType=basic&isGame=false' + \
             '&reportName=skatersummary&sort=[{"property":"points","direction":"DESC"}]&cayenneExp=gameTypeId=' + \
             str(type) + 'and seasonId%3E=' + start + 'and seasonId%3C=' + end
-    skaters = pd.DataFrame(data=request_json(req)['data'])
+    skater_data = request_json(req)
 
-    skaters = skaters[['playerId', 'playerName', 'playerPositionCode', 'points', 'gamesPlayed',
-                       'playerBirthDate', 'playerHeight', 'playerWeight', 'seasonId']]
-    maskForwards = skaters['playerPositionCode'] != 'D'
-    skaters.loc[maskForwards, 'playerPositionCode'] = 'F'
+    if "success" in skater_data: # Note there is no success key in
+        raise Exception("Could not update skater stats.")
+    else:
+        skaters = pd.DataFrame(data=skater_data["data"])
+        skaters = skaters[['playerId', 'playerName', 'playerPositionCode', 'points', 'gamesPlayed',
+                           'playerBirthDate', 'playerHeight', 'playerWeight', 'seasonId']]
+        maskForwards = skaters['playerPositionCode'] != 'D'
+        skaters.loc[maskForwards, 'playerPositionCode'] = 'F'
 
-    return skaters
+        return skaters
 
 def get_goalie_stats(start,end,type=2):
     req = 'http://www.nhl.com/stats/rest/goalies?isAggregate=false&reportType=goalie_basic&isGame=false' +\
@@ -130,13 +134,14 @@ def update_stats(endYearOfSeason, regularSeason, SPREADSHEET_ID):
     goalies = get_goalie_stats(startSeason, endSeason, gametype)
     all_stats = pd.concat([skaters, goalies], axis=0)
     all_stats = all_stats.sort_values('playerName')
+    all_stats.fillna(0, inplace=True)
 
     pushUpdatetoSheet(all_stats, SPREADSHEET_ID, 'nhl_leaders')
 
 if __name__ == "__main__":
 
     endYearOfSeason = 2019
-    regularSeason = True
+    regularSeason = False
     googleSheetID = '1CEz-fbuBqrCl2EzEQlUBtsfRSMGDgxKikKB1cNqubPQ'
     #googleSheetID = '1UOM45jvuMb3lo_LpGU-b8Afr0MEf-K8aNNyQrOEFdQU'
     sheetName = 'nhl_leaders'
