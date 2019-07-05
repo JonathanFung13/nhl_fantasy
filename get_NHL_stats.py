@@ -101,7 +101,7 @@ def get_drafts(start, end):
         for rounds in draft["rounds"]:
             for round in rounds:
                 for pick in round["picks"]:
-                    print(pick["prospect"]["fullName"], pick["prospect"]["link"])
+                    print(draft_year, pick["prospect"]["fullName"], pick["prospect"]["link"])
                     player_details = get_prospect_info(pick["prospect"]["link"])
                     players.append({**pick, **player_details})
 

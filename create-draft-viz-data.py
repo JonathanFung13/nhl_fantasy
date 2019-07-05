@@ -33,6 +33,8 @@ def get_career_stats(start, end, regularSeason):
 
 def update_team_names(df):
     # Update names of relocated franchises.
+    df.loc[df["team.name"]=="Winnipeg Jets (1979)", "team.name"] = "Arizona Coyotes"
+    df.loc[df["team.name"]=="Hartford Whalers", "team.name"] = "Carolina Hurricanes"
     df.loc[df["team.name"]=="Phoenix Coyotes", "team.name"] = "Arizona Coyotes"
     df.loc[df["team.name"]=="Atlanta Thrashers", "team.name"] = "Winnipeg Jets"
 
@@ -67,6 +69,13 @@ def clean_data(df):
     df.loc[df["position"].isnull(), "position"] = df["primaryPosition.abbreviation"]
     df.loc[df["position"].isnull(), "position"] = "U"
 
+    # Fix incorrect float types as integers
+    int_columns = ["weight", "playerHeight", "playerWeight", "playerId", 'gamesPlayed', 'goals', 'assists', 'points',
+                   'shotsAgainst', 'saves', 'shutouts', 'jerseyNumber']
+    for col in int_columns:
+        df[col].fillna(0, inplace=True)
+        df[col] = df[col].astype('int64')
+
     return df
 
 def reduce_columns(df):
@@ -83,7 +92,7 @@ def reduce_columns(df):
     return df
 
 def main():
-    start_season = 2008
+    start_season = 1995
     end_season = 2019
     regular_season = True
 
