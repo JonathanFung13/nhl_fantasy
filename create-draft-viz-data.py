@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function
+#from __future__ import print_function
 import get_NHL_stats as gs
 import pandas as pd
 

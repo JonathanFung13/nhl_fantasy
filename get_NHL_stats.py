@@ -123,3 +123,6 @@ def load_csv(filename):
 
     df = pd.read_csv(df_filename)
     return df
+
+if __name__ == "main":
+    print("Please run one of the other .py files.")
