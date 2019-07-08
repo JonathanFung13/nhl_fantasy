@@ -2,18 +2,18 @@
 # -*- coding: utf-8 -*-
 
 #from __future__ import print_function
-import get_NHL_stats as gs
+import utilities as util
 import pandas as pd
 
 def get_career_stats(start, end, regularSeason):
 
     # Get skater and goalie stats, combine them in a dataframe.
-    skaters = gs.get_skater_stats(start, end, regularSeason)
+    skaters = util.get_skater_stats(start, end, regularSeason)
     skaters = skaters[["playerName", "playerPositionCode", "playerNationality", "playerHeight", "playerWeight",
                        "playerId", "gamesPlayed", "goals", "assists", "points", "pointsPerGame",
                        "playerBirthCity", "playerBirthCountry", "playerBirthDate"]]
 
-    goalies = gs.get_goalie_stats(start, end, regularSeason)
+    goalies = util.get_goalie_stats(start, end, regularSeason)
     goalies = goalies[["playerName", "playerPositionCode", "playerNationality", "playerHeight", "playerWeight",
                        "playerId", "gamesPlayed", "shotsAgainst", "saves", "shutouts", "savePctg",
                        "playerBirthCity", "playerBirthCountry", "playerBirthDate"]]
@@ -97,17 +97,17 @@ def main():
     regular_season = True
 
     if False:
-        drafts = gs.get_drafts(start_season, end_season) # Takes a loonnnggg time to run
+        drafts = util.get_drafts(start_season, end_season) # Takes a loonnnggg time to run
         players = get_career_stats(start_season, end_season, regular_season)
-        rosters = gs.get_rosters()
+        rosters = util.get_rosters()
 
-        gs.save_csv("drafts.csv", drafts)
-        gs.save_csv("players.csv", players)
-        gs.save_csv("rosters.csv", rosters)
+        util.save_csv("drafts.csv", drafts)
+        util.save_csv("players.csv", players)
+        util.save_csv("rosters.csv", rosters)
     else:
-        drafts = gs.load_csv("drafts.csv")
-        players = gs.load_csv("players.csv")
-        rosters = gs.load_csv("rosters.csv")
+        drafts = util.load_csv("drafts.csv")
+        players = util.load_csv("players.csv")
+        rosters = util.load_csv("rosters.csv")
 
     drafts = update_team_names(drafts)
     drafts = drafts.sort_values(["team.name", "year", "round"], ascending=[1, 0, 1])
@@ -124,7 +124,7 @@ def main():
     draft_data = clean_data(draft_data)
     draft_data = reduce_columns(draft_data)
 
-    gs.save_csv("draft_data.csv", draft_data)
+    util.save_csv("draft_data.csv", draft_data)
 
 
 if __name__ == "__main__":

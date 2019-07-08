@@ -7,7 +7,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import pandas as pd
 import datetime as dt
-import get_NHL_stats as gs
+import utilities as util
 from pprint import pprint
 import pickle
 import os.path
@@ -70,16 +70,16 @@ def push_update_to_sheet(stats, gsheet_id, sheet_name):
     return
 
 def update_rosters(gsheet_id, sheet_name='nhl_rosters', savefile=False):
-    rosters = gs.get_rosters()
+    rosters = util.get_rosters()
 
     if savefile:
-        gs.save_csv(sheet_name + '.csv', rosters)
+        util.save_csv(sheet_name + '.csv', rosters)
     else:
         push_update_to_sheet(rosters, gsheet_id, sheet_name)
     return
 
 def get_skater_stats(end, type=True):
-    skaters = gs.get_skater_stats(end, end, type)
+    skaters = util.get_skater_stats(end, end, type)
     skaters = skaters[['playerId', 'playerName', 'playerPositionCode', 'points', 'gamesPlayed',
                        'playerBirthDate', 'playerHeight', 'playerWeight']]
     maskForwards = skaters['playerPositionCode'] != 'D'
@@ -88,7 +88,7 @@ def get_skater_stats(end, type=True):
     return skaters
 
 def get_goalie_stats(end,type=True):
-    goalies = gs.get_goalie_stats(end, end, type)
+    goalies = util.get_goalie_stats(end, end, type)
 
     # Applying custom scoring to goalie stats.
     # Goalie points are saves/9 - goals_against + points + shutouts
@@ -112,7 +112,7 @@ def update_stats(endYearOfSeason, regularSeason, gsheet_id, sheet_name='nhl_lead
     all_stats.fillna(0, inplace=True)
 
     if savefile:
-        gs.save_csv(sheet_name + '.csv', all_stats)
+        util.save_csv(sheet_name + '.csv', all_stats)
     else:
         push_update_to_sheet(all_stats, gsheet_id, sheet_name)
 
