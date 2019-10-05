@@ -93,19 +93,23 @@ def reduce_columns(df):
 
 def main():
     start_season = 1995
-    end_season = 2019
+    end_season = 2020
     regular_season = True
 
+    # Only need to update drafts once a year
     if False:
         drafts = util.get_drafts(start_season, end_season) # Takes a loonnnggg time to run
-        players = get_career_stats(start_season, end_season, regular_season)
-        rosters = util.get_rosters()
-
         util.save_csv("drafts.csv", drafts)
-        util.save_csv("players.csv", players)
-        util.save_csv("rosters.csv", rosters)
     else:
         drafts = util.load_csv("drafts.csv")
+
+    if True:
+        players = get_career_stats(start_season, end_season, regular_season)
+        util.save_csv("players.csv", players)
+
+        rosters = util.get_rosters()
+        util.save_csv("rosters.csv", rosters)
+    else:
         players = util.load_csv("players.csv")
         rosters = util.load_csv("rosters.csv")
 
