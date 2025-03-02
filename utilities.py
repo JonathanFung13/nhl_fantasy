@@ -4,7 +4,6 @@
 import requests
 import json
 import pandas as pd
-from pandas.io.json import json_normalize
 import os
 
 OUTPUT_FOLDER = "output"
@@ -21,11 +20,16 @@ def get_game_type(regular_season=True):
     return gametype
 
 def request_json(url):
-    resp_json = requests.get(url).text
-    data = json.loads(resp_json)
+    response = requests.get(url)
+    if not response.ok:
+        raise Exception("Could not complete request for: " + url)
+
+    response_txt = response.text
+    data = json.loads(response_txt)
 
     if "success" in data: # Note there is no success key in response
         raise Exception("Could not complete request for: " + url)
+
     return data
 
 def get_skater_stats(start, end, regular_season=True):
@@ -33,11 +37,25 @@ def get_skater_stats(start, end, regular_season=True):
     end = get_string_season(end)
     type = get_game_type(regular_season)
 
-    req = "http://www.nhl.com/stats/rest/skaters?isAggregate=true&reportType=basic&isGame=false" + \
-          '&reportName=skatersummary&sort=[{"property":"points","direction":"DESC"}]&cayenneExp=gameTypeId=' + \
-          str(type) + "and seasonId%3E=" + start + "and seasonId%3C=" + end
-    skater_data = request_json(req)
-    skaters = pd.DataFrame(data=skater_data["data"])
+    base_url = 'https://api.nhle.com/stats/rest/en/skater/summary?isAggregate=false&isGame=false&' + \
+          'sort=[{\"property\":\"lastName\",\"direction\":\"ASC_CI\"},' + \
+          '{\"property\":\"skaterFullName\",\"direction\":\"ASC_CI\"},' + \
+          '{\"property\":\"playerId\",\"direction\":\"ASC\"}]'
+
+    limit, offset, skaters = 100, 0, []
+    while True:
+        params = '&start={}&limit={}&factCayenneExp=gamesPlayed>=1&cayenneExp=gameTypeId={} and seasonId<={} and seasonId>={}'.format(offset, limit, type, end, start)
+        url = base_url + params
+        print(url)
+        response = request_json(base_url + params)
+
+        if len(response.get('data')) > 0:
+            skaters += response.get('data')
+            offset += limit
+        else:
+            break
+
+    skaters = pd.DataFrame(skaters)
 
     return skaters
 
@@ -46,16 +64,25 @@ def get_goalie_stats(start, end, regular_season=True):
     end = get_string_season(end)
     type = get_game_type(regular_season)
 
-    req = "http://www.nhl.com/stats/rest/goalies?isAggregate=true&reportType=goalie_basic&isGame=false" +\
-          '&reportName=goaliesummary&sort=[{"property":"saves","direction":"DESC"}]&cayenneExp=gameTypeId=' + \
-          str(type) + "and seasonId%3E=" + start + "and seasonId%3C=" + end
-    goalie_data = request_json(req)
-    goalies = pd.DataFrame(data=goalie_data["data"])
+    limit, offset, goalie_data = 100, 0, []
+    while True:
+        url = f'https://api.nhle.com/stats/rest/en/goalie/summary?isAggregate=false&isGame=false&sort=%5B%7B%22property%22:%22saves%22,%22direction%22:%22DESC%22%7D,%7B%22property%22:%22playerId%22,%22direction%22:%22ASC%22%7D%5D&start={offset}&limit={limit}&cayenneExp=gameTypeId={type}%20and%20seasonId%3C={start}%20and%20seasonId%3E={end}'
+        print(url)
+        response = request_json(url)
+
+        if len(response.get('data')) > 0:
+            goalie_data += response.get('data')
+            offset += limit
+        else:
+            break
+
+    goalies = pd.DataFrame(goalie_data)
 
     return goalies
 
 def get_rosters():
     req = "https://statsapi.web.nhl.com/api/v1/teams?expand=team.roster"
+    #"https://records.nhl.com/site/api/player/byTeam/5?include=id&include=firstName&include=lastName&include=sweaterNumber&include=position&include=height&include=weight&include=birthDate&include=birthCountry&include=birthCity&include=birthStateProvince&include=onRoster"
     roster_data = request_json(req)
 
     rosters = []
@@ -105,7 +132,7 @@ def get_drafts(start, end):
                     player_details = get_prospect_info(pick["prospect"]["link"])
                     players.append({**pick, **player_details})
 
-    drafts = pd.DataFrame.from_records(json_normalize(players))
+    drafts = pd.DataFrame.from_records(pd.json_normalize(players))
 
     return drafts
 
