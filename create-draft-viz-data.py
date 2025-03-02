@@ -9,14 +9,36 @@ def get_career_stats(start, end, regularSeason):
 
     # Get skater and goalie stats, combine them in a dataframe.
     skaters = util.get_skater_stats(start, end, regularSeason)
-    skaters = skaters[["playerName", "playerPositionCode", "playerNationality", "playerHeight", "playerWeight",
-                       "playerId", "gamesPlayed", "goals", "assists", "points", "pointsPerGame",
-                       "playerBirthCity", "playerBirthCountry", "playerBirthDate"]]
+    skater_cols = [
+        "playerName", "playerPositionCode", "playerNationality", "playerHeight", "playerWeight",
+        "playerId", "gamesPlayed", "goals", "assists", "points", "pointsPerGame",
+        "playerBirthCity", "playerBirthCountry", "playerBirthDate"
+    ]
+    skater_cols = [
+        "skaterFullName", "positionCode", #"playerNationality", "playerHeight", "playerWeight",
+        "playerId", "gamesPlayed", "goals", "assists", "points", "pointsPerGame",
+        #"playerBirthCity", "playerBirthCountry", "playerBirthDate"
+    ]
+    df_cols = skaters.columns
+    scols = [d for d in skater_cols if d in df_cols]
+    missing_cols = [d for d in skater_cols if d not in df_cols]
+    print(missing_cols)
+    skaters = skaters[scols]
 
     goalies = util.get_goalie_stats(start, end, regularSeason)
-    goalies = goalies[["playerName", "playerPositionCode", "playerNationality", "playerHeight", "playerWeight",
-                       "playerId", "gamesPlayed", "shotsAgainst", "saves", "shutouts", "savePctg",
-                       "playerBirthCity", "playerBirthCountry", "playerBirthDate"]]
+    goalie_cols = [
+        "playerName", "playerPositionCode", "playerNationality", "playerHeight", "playerWeight",
+        "playerId", "gamesPlayed", "shotsAgainst", "saves", "shutouts", "savePctg",
+        "playerBirthCity", "playerBirthCountry", "playerBirthDate"
+    ]
+    df_cols = goalies.columns
+    g_cols = [d for d in goalie_cols if d in df_cols]
+    missing_cols = [d for d in goalie_cols if d not in df_cols]
+    print(df_cols)
+    print(missing_cols)
+    print(g_cols)
+    skaters = skaters[scols]
+    goalies = goalies[g_cols]
 
     all_stats = pd.concat([skaters, goalies], axis=0, sort=False)
     all_stats = all_stats.sort_values("playerName")
@@ -41,9 +63,9 @@ def update_team_names(df):
     return df
 
 def set_statuses(df):
-    df.loc[df["team.name"] != df["teamName"], "status"] = "other_team"
-    df.loc[df["team.name"] == df["teamName"], "status"] = "active"
-    df.loc[df["teamName"].isnull(), "status"] = "inactive"
+    # df.loc[df["team.name"] != df["teamName"] & df[""], "status"] = "other_team"
+    # df.loc[df["team.name"] == df["teamName"], "status"] = "active"
+    # df.loc[df["teamName"].isnull(), "status"] = "inactive"
 
     max_year = df["year"].max()
     df["gpPerYear"] = df["gamesPlayed"] / (max_year - df["year"] + 1)
@@ -61,20 +83,20 @@ def set_statuses(df):
     return df
 
 def clean_data(df):
-    df.loc[df["birthCity"].isnull(), "birthCity"] = df["playerBirthCity"]
-    df.loc[df["birthCountry"].isnull(), "birthCountry"] = df["playerBirthCountry"]
-    df.loc[df["birthDate"].isnull(), "birthDate"] = df["playerBirthDate"]
-    df.loc[df["nationality"].isnull(), "nationality"] = df["playerNationality"]
-    df.loc[df["playerId"].isnull(), "playerId"] = df["nhlPlayerId"]
-    df.loc[df["position"].isnull(), "position"] = df["primaryPosition.abbreviation"]
+    # df.loc[df["birthCity"].isnull(), "birthCity"] = df["playerBirthCity"]
+    # df.loc[df["birthCountry"].isnull(), "birthCountry"] = df["playerBirthCountry"]
+    # df.loc[df["birthDate"].isnull(), "birthDate"] = df["playerBirthDate"]
+    # df.loc[df["nationality"].isnull(), "nationality"] = df["playerNationality"]
+    # df.loc[df["playerId"].isnull(), "playerId"] = df["nhlPlayerId"]
+    # df.loc[df["position"].isnull(), "position"] = df["primaryPosition.abbreviation"]
     df.loc[df["position"].isnull(), "position"] = "U"
 
-    # Fix incorrect float types as integers
-    int_columns = ["weight", "playerHeight", "playerWeight", "playerId", 'gamesPlayed', 'goals', 'assists', 'points',
-                   'shotsAgainst', 'saves', 'shutouts', 'jerseyNumber']
-    for col in int_columns:
-        df[col].fillna(0, inplace=True)
-        df[col] = df[col].astype('int64')
+    # # Fix incorrect float types as integers
+    # int_columns = ["weight", "playerHeight", "playerWeight", "playerId", 'gamesPlayed', 'goals', 'assists', 'points',
+    #                'shotsAgainst', 'saves', 'shutouts', 'jerseyNumber']
+    # for col in int_columns:
+    #     df[col].fillna(0, inplace=True)
+    #     df[col] = df[col].astype('int64')
 
     return df
 
@@ -92,41 +114,42 @@ def reduce_columns(df):
     return df
 
 def main():
-    start_season = 1995
-    end_season = 2020
+    start_season = 2007
+    end_season = 2023
     regular_season = True
 
-    # Only need to update drafts once a year
-    if False:
-        drafts = util.get_drafts(start_season, end_season) # Takes a loonnnggg time to run
-        util.save_csv("drafts.csv", drafts)
-    else:
-        drafts = util.load_csv("drafts.csv")
-
-    if True:
-        players = get_career_stats(start_season, end_season, regular_season)
-        util.save_csv("players.csv", players)
-
-        rosters = util.get_rosters()
-        util.save_csv("rosters.csv", rosters)
-    else:
-        players = util.load_csv("players.csv")
-        rosters = util.load_csv("rosters.csv")
-
-    drafts = update_team_names(drafts)
-    drafts = drafts.sort_values(["team.name", "year", "round"], ascending=[1, 0, 1])
-
-    # Merge all data into one dataframe
-    drafts['name_lower'] = drafts['prospect.fullName'].str.lower()
-    players['name_lower'] = players['playerName'].str.lower()
-    rosters['name_lower'] = rosters['fullName'].str.lower()
-    draft_data = pd.merge(drafts, players, how="left", on="name_lower", sort=False, suffixes=("", "_x"))
-    draft_data = pd.merge(draft_data, rosters, how="left", on="name_lower", sort=False, suffixes=("", "_y"))
+    # # Only need to update drafts once a year
+    # if False:
+    #     drafts = util.get_drafts(start_season, end_season) # Takes a loonnnggg time to run
+    #     util.save_csv("drafts.csv", drafts)
+    # else:
+    #     drafts = util.load_csv("drafts.csv")
+    #
+    # if True:
+    #     players = get_career_stats(start_season, end_season, regular_season)
+    #     util.save_csv("players.csv", players)
+    #
+    #     rosters = util.get_rosters()
+    #     util.save_csv("rosters.csv", rosters)
+    # else:
+    #     players = util.load_csv("players.csv")
+    #     rosters = util.load_csv("rosters.csv")
+    #
+    # drafts = update_team_names(drafts)
+    # drafts = drafts.sort_values(["team.name", "year", "round"], ascending=[1, 0, 1])
+    #
+    # # Merge all data into one dataframe
+    # drafts['name_lower'] = drafts['prospect.fullName'].str.lower()
+    # players['name_lower'] = players['playerName'].str.lower()
+    # rosters['name_lower'] = rosters['fullName'].str.lower()
+    # draft_data = pd.merge(drafts, players, how="left", on="name_lower", sort=False, suffixes=("", "_x"))
+    # draft_data = pd.merge(draft_data, rosters, how="left", on="name_lower", sort=False, suffixes=("", "_y"))
+    draft_data = util.load_csv("draft_stats.csv")
 
     # Update positions and set statuses for each filter in the visuzalization.  Then get rid of unneeded columns.
     draft_data = set_statuses(draft_data)
     draft_data = clean_data(draft_data)
-    draft_data = reduce_columns(draft_data)
+    # draft_data = reduce_columns(draft_data)
 
     util.save_csv("draft_data.csv", draft_data)
 
