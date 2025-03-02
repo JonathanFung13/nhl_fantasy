@@ -16,7 +16,7 @@ import os.path
 def push_update_to_sheet(stats, gsheet_id, sheet_name):
     # Setup the Sheets API
     # from https://developers.google.com/sheets/api/quickstart/python
-    SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
+    SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
     creds = None
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
@@ -30,7 +30,7 @@ def push_update_to_sheet(stats, gsheet_id, sheet_name):
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
+                'client_secret.json', SCOPES)
             creds = flow.run_local_server()
         # Save the credentials for the next run
         with open('token.pickle', 'wb') as token:
@@ -80,10 +80,9 @@ def update_rosters(gsheet_id, sheet_name='nhl_rosters', savefile=False):
 
 def get_skater_stats(end, type=True):
     skaters = util.get_skater_stats(end, end, type)
-    skaters = skaters[['playerId', 'playerName', 'playerPositionCode', 'points', 'gamesPlayed',
-                       'playerBirthDate', 'playerHeight', 'playerWeight']]
-    maskForwards = skaters['playerPositionCode'] != 'D'
-    skaters.loc[maskForwards, 'playerPositionCode'] = 'F'
+    skaters = skaters[['playerId', 'skaterFullName', 'positionCode', 'points', 'gamesPlayed']]
+    maskForwards = skaters['positionCode'] != 'D'
+    skaters.loc[maskForwards, 'positionCode'] = 'F'
 
     return skaters
 
@@ -93,13 +92,14 @@ def get_goalie_stats(end,type=True):
     # Applying custom scoring to goalie stats.
     # Goalie points are saves/9 - goals_against + points + shutouts
     goalies['points'] = goalies['saves'] / 9.0 - goalies['goalsAgainst']
-    goalies['points'] += goalies['goals'] + goalies['assists'] + goalies['shutouts']
+    goalies['points'] += goalies['goals'] + goalies['assists'] + goalies['shutouts'] * 2 + goalies['wins']
     goalies['points'] = goalies['points'].round(0)
     maskNegatives = goalies['points'] < 0
     goalies.loc[maskNegatives, 'points'] = 0
+    goalies['positionCode'] = 'G'
 
-    goalies = goalies[['playerId', 'playerName', 'playerPositionCode', 'points', 'gamesPlayed',
-                       'playerBirthDate', 'playerHeight', 'playerWeight']]
+    goalies = goalies[['playerId', 'goalieFullName', 'positionCode', 'points', 'gamesPlayed']]
+    goalies.columns = ['playerId', 'skaterFullName', 'positionCode', 'points', 'gamesPlayed']
     return goalies
 
 def update_stats(endYearOfSeason, regularSeason, gsheet_id, sheet_name='nhl_leaders', savefile=False):
@@ -108,15 +108,16 @@ def update_stats(endYearOfSeason, regularSeason, gsheet_id, sheet_name='nhl_lead
     skaters = get_skater_stats(endYearOfSeason, regularSeason)
     goalies = get_goalie_stats(endYearOfSeason, regularSeason)
     all_stats = pd.concat([skaters, goalies], axis=0)
-    all_stats = all_stats.sort_values('playerName')
+    all_stats = all_stats.sort_values('skaterFullName')
     all_stats.fillna(0, inplace=True)
 
     if savefile:
         util.save_csv(sheet_name + '.csv', all_stats)
     else:
         push_update_to_sheet(all_stats, gsheet_id, sheet_name)
+    return
 
-def main():
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='NHL Fantasy Stats')
     parser.add_argument('-g', '--gsheet', help='Push update to a Google Sheet instead of saving to a file.',
                         action='store_false', dest='save_file')
@@ -140,7 +141,3 @@ def main():
         update_rosters(args.gsheet_id, args.roster_sheet_name, args.save_file)
     if args.update_type > 1:
         update_stats(args.endYearOfSeason, args.regularSeason, args.gsheet_id, args.leader_sheet_name, args.save_file)
-
-if __name__ == "__main__":
-    main()
-
