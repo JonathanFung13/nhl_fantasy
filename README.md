@@ -35,3 +35,9 @@ Run the script in your terminal.
 
 The first time you run the application, you will be prompted to click on a link to open a browser and grant permission 
 to the application.  Log in to your account and accept.
+
+pip3 install google-api-python-client google-auth-httplib2 google-auth-oauthlib requests -t ./package
+cd package
+zip -r ../lambda_function.zip .
+cd ..
+zip -g lambda_function.zip lambda_function.py client_secret.json create-draft-viz-data.py token.pickle update_stats.py utilities.py

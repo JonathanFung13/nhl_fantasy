@@ -3,6 +3,8 @@
 *.pickle
 *.sh
 output/
+package/
+*.zip
 .idea/
 
 # Byte-compiled / optimized / DLL files
