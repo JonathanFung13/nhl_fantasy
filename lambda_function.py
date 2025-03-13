@@ -3,7 +3,7 @@ import logging
 from update_stats import update_stats, update_rosters
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
     datefmt='%m-%d %H:%M:%S'
 )
