@@ -73,14 +73,28 @@ def push_update_to_sheet(stats, gsheet_id, sheet_name):
     updateTimestamp = service.spreadsheets().values().update(spreadsheetId=gsheet_id,
                                                              range=sheet_name + '!J1',
                                                              valueInputOption=value_input_option,
-                                                             body={'values': [[str(dt.datetime.now(pytz.timezone('America/Edmonton')))]]})
+                                                             body={'values': [[dt.datetime.now(pytz.timezone('America/Edmonton')).strftime('%Y-%m-%d %H:%M:%S')]]})
     responseTime = updateTimestamp.execute()
 
     return
 
 def update_rosters(gsheet_id, sheet_name='nhl_rosters', savefile=False):
-    rosters = util.get_rosters()
-    push_update_to_sheet(rosters, gsheet_id, sheet_name)
+    raw_rosters = util.get_rosters()
+    clean_rosters = [{
+        'playerId': r.get('id'),
+        'lastName': r.get('lastName'),
+        'firstName': r.get('firstName'),
+        'skaterFullName': f"{r.get('firstName')} {r.get('lastName')}",
+        'position': r.get('position'),
+        'team': r.get('team'),
+        'onRoster': r.get('onRoster'),
+        'birthDate': r.get('birthDate'),
+        'height': r.get('height'),
+        'weight': r.get('weight')
+    } for r in raw_rosters]
+    rosters = sorted(clean_rosters, key=lambda x: x['skaterFullName'])
+    stats_list = [list(r.values()) for r in rosters]
+    push_update_to_sheet(stats_list, gsheet_id, sheet_name)
     return
 
 def get_skater_stats(end, type=True):

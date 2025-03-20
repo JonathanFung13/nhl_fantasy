@@ -80,27 +80,19 @@ def get_goalie_stats(start, end, regular_season=True):
     return goalie_data
 
 def get_rosters():
-    # req = "https://statsapi.web.nhl.com/api/v1/teams?expand=team.roster"
-    # #"https://records.nhl.com/site/api/player/byTeam/5?include=id&include=firstName&include=lastName&include=sweaterNumber&include=position&include=height&include=weight&include=birthDate&include=birthCountry&include=birthCity&include=birthStateProvince&include=onRoster"
-    # roster_data = request_json(req)
+    teams_url = 'https://records.nhl.com/site/api/franchise-detail'
+    team_response = request_json(teams_url)
 
     rosters = []
-    # for teams in roster_data["teams"]:
-    #     for players in teams["roster"]["roster"]:
-    #         if "jerseyNumber" in players:
-    #             number = players["jerseyNumber"]
-    #         else:
-    #             number = 0
-    #
-    #         rosters.append({
-    #             "fullName": players["person"]["fullName"],
-    #             "jerseyNumber": number,
-    #             "position": players["position"]["abbreviation"],
-    #             "teamName": teams["name"]
-    #         })
-    #
-    # rosters = pd.DataFrame.from_records(rosters)
-    # rosters = rosters.sort_values("fullName")
+    for team in team_response.get('data'):
+        if not team.get('active') or not team.get('mostRecentTeamId'):
+            continue
+        team_id = team.get('mostRecentTeamId')
+        url = f"https://records.nhl.com/site/api/player/byTeam/{team_id}?include=id&include=firstName&include=lastName&include=sweaterNumber&include=position&include=height&include=weight&include=birthDate&include=birthCountry&include=birthCity&include=birthStateProvince&include=onRoster"
+        response = request_json(url)
+        team_players = response.get('data')
+        with_team_info = [{**player, 'team': team.get('teamFullName')} for player in team_players]
+        rosters.extend(with_team_info)
 
     return rosters
 
